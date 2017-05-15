@@ -79,9 +79,9 @@ int print_summary(struct statistic* summary,int thread_num,
 {
     fprintf(stderr,"============SUMMARY:===========\n");
     fprintf(stderr,"parallel             : %d\n",thread_num);
-    fprintf(stderr,"speed                : %d (KBPS)\n",speed);
+    fprintf(stderr,"speed                : %d (KBPS)\n",(speed/1024));
     fprintf(stderr,"frame rate           : %d (frames/s)\n",frame);
-    fprintf(stderr,"single file size     : %d (MB)\n",filesize);
+    fprintf(stderr,"single file size     : %d (MB)\n",(filesize/1024/1024));
     fprintf(stderr,"filenum per thread   : %d\n\n",filenum);
     fprintf(stderr,"filename begin_index : %d\n\n",begin_index);
 
