@@ -4,20 +4,23 @@
 
 usage:  ./streamwriter -p 3 -s 10240 -n 2 -f 10 -S 80 -b 5
 
--p parallel   thread num in parallel 
--s speed      stream speed of single thread
--n num        number of files that  every thread will generate
--f frames     frames in one second : 10 mean write 1 frame every 100 ms
--S size       file size of single file 
--b prefix     prefix of every file 
+```
+-p   --parallel   thread num in parallel
+-s   --speed      write speed in every single thread (KB/s)
+-f   --frames     frames we should write in one second 
+-n   --number     file numbers than every thread should generate 
+-S   --size       file size of each file (MB)
+-b   --prefix     file name's prefix 
+```
 
 the file name is like this :
 X-Y-Z.mp4
 
+```
 X mean prefix 
 Y mean thread index
 Z mean file index 
-
+```
 
 the output of this program is like this :
 
