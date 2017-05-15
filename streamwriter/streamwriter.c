@@ -34,6 +34,7 @@ struct worker_args {
     struct statistic* stat; 
 };
 
+
 int initialize_statistic(struct statistic* stat)
 {
     stat->frames = 0; 
@@ -247,6 +248,17 @@ void * worker(void* param)
     return NULL;
 }
 
+void usage()
+{
+    fprintf(stdout, "streamwriter -p thread_num -s speed -n filenum -f frames_num -S filesize  -b begin_index\n");
+    fprintf(stdout, "-p   --parallel   thread num in parallel\n");
+    fprintf(stdout, "-s   --speed      write speed in every single thread (KB/s)\n");
+    fprintf(stdout, "-f   --frames     frames we should write in one second \n");
+    fprintf(stdout, "-n   --number     file numbers than every thread should generate \n");
+    fprintf(stdout, "-S   --size       file size of each file  (MB)\n");
+    fprintf(stdout, "-b   --prefix     file name's prefix \n");
+}
+
 int main(int argc, char* argv[])
 {
     static struct option long_options[] = {
@@ -264,10 +276,10 @@ int main(int argc, char* argv[])
     int option_index = 0;
 
     int thread_num= 1 ;
-    int speed = 1024*1024;  // unit KB
-    int frame = 10  ;  // 10 frame per second 
-    ssize_t filesize = 512*1024*1024;
-    int file_num = 100;
+    int speed = 0 ;  // unit KB
+    int frame = 0  ;  // 10 frame per second 
+    ssize_t filesize = 0 ;
+    int file_num = 0;
     int begin_index = 0 ;
     struct statistic summary ; 
 
@@ -297,7 +309,7 @@ int main(int argc, char* argv[])
 	    break;
 	case 'h':
 	case '?':
-	    fprintf(stdout, "streamwriter -p thread_num -s speed -n filenum -f frames_num -S filesize  -b begin_index\n");
+	    usage();
 	    return 0;
 	    break;
 	default:
@@ -305,6 +317,11 @@ int main(int argc, char* argv[])
 	}
     }
 
+    if(speed <=0 || file_num <= 0 || filesize <=0 ||frame <=0)
+    {
+        usage();
+	exit(1);
+    }
 
     int idx = 0 ; 
     daemon(1,1);
