@@ -24,7 +24,7 @@
 #define STRCAT(dest, source)  \
     do { \
 	if(dest[0] == '\0')  \
-	    strcat(dest, source); \
+	strcat(dest, source); \
 	else \
 	{ \
 	    strcat(dest,", ");\
@@ -45,7 +45,7 @@ int print_progname(pid_t pid)
     fd = open(proc_item_name,O_RDONLY);
     if(fd >=0)
     {
-        len = read(fd, progname, sizeof(progname));
+	len = read(fd, progname, sizeof(progname));
 
 	while(len > 0 && progname[len-1] == '\n')
 	{
@@ -55,16 +55,16 @@ int print_progname(pid_t pid)
 
     if(len > 0)
     {
-        progname[len] = '\0';
+	progname[len] = '\0';
     }
     else
     {
-        strcpy(progname, "unknown");
+	strcpy(progname, "unknown");
     }
 
     if(fd >=0 )
     {
-        close(fd);
+	close(fd);
     }
     printf(" %-25s ",progname);
     return 0;
@@ -287,11 +287,11 @@ int main(int argc, char *argv[])
 		if (path_len < 0)
 		    goto fail;
 		path[path_len] = '\0';
-	  	//printf("%s:", path);
+		//printf("%s:", path);
 	    } else
 		//printf("?:");
 
-	    set_special_ignored(fan_fd, metadata->fd, path);
+		set_special_ignored(fan_fd, metadata->fd, path);
 
 	    printf(" pid=%-8ld", (long)metadata->pid);
 	    print_progname(metadata->pid);
@@ -329,13 +329,13 @@ int main(int argc, char *argv[])
 			    metadata->mask))
 		    goto fail;
 	    }
-   
+
 	    if(metadata->fd)
 	    {
-	  	printf("\t%s", path);
+		printf("\t%s", path);
 	    } else
-            {
-	        printf("\t?");
+	    {
+		printf("\t?");
 	    }
 	    printf("\n");
 	    fflush(stdout);
