@@ -21,6 +21,17 @@
 
 #define FANOTIFY_ARGUMENTS "cdfhmnp"
 
+#define STRCAT(dest, source)  \
+    do { \
+	if(dest[0] == '\0')  \
+	    strcat(dest, source); \
+	else \
+	{ \
+	    strcat(dest,", ");\
+	    strcat(dest, source); \
+	} \
+    } while(0) 
+
 int fan_fd;
 
 int print_progname(pid_t pid)
@@ -254,6 +265,7 @@ int main(int argc, char *argv[])
 	struct fanotify_event_metadata *metadata;
 	char path[PATH_MAX];
 	int path_len;
+	char multi_event_buffer[30];
 
 	metadata = (void *)buf;
 	while(FAN_EVENT_OK(metadata, len)) {
@@ -284,22 +296,27 @@ int main(int argc, char *argv[])
 	    printf(" pid=%-8ld", (long)metadata->pid);
 	    print_progname(metadata->pid);
 
+	    memset(multi_event_buffer,'\0',sizeof(multi_event_buffer));
 	    if (metadata->mask & FAN_ACCESS)
-		printf(" %-18s", "access");
+		STRCAT(multi_event_buffer, "access") ;
 	    if (metadata->mask & FAN_OPEN)
-		printf(" %-18s", "open");
+		STRCAT(multi_event_buffer, "open");
 	    if (metadata->mask & FAN_MODIFY)
-		printf(" %-18s", "modify");
+		STRCAT(multi_event_buffer, "modify");
 	    if (metadata->mask & FAN_CLOSE) {
 		if (metadata->mask & FAN_CLOSE_WRITE)
-		    printf(" %-18s", "close(writable)");
+		    STRCAT(multi_event_buffer, "close(writable)");
 		if (metadata->mask & FAN_CLOSE_NOWRITE)
-		    printf(" %198s","close");
+		    STRCAT(multi_event_buffer, "close");
 	    }
 	    if (metadata->mask & FAN_OPEN_PERM)
-		printf(" %-18s", "open_perm");
+		STRCAT(multi_event_buffer, "open_perm");
 	    if (metadata->mask & FAN_ACCESS_PERM)
-		printf(" %-18s", "access_perm");
+		STRCAT(multi_event_buffer, "access_perm");
+
+	    multi_event_buffer[24] = '\0';
+	    printf(" %-25s",  multi_event_buffer);
+
 	    if (metadata->mask & FAN_ALL_PERM_EVENTS) {
 		if (opt_sleep)
 		    sleep(opt_sleep);
