@@ -1,4 +1,7 @@
+
+#define _XOPEN_SOURCE 600
 #include <stdio.h>
+
 #include <stdlib.h>
 #include <unistd.h>
 #include <sys/types.h>
@@ -9,6 +12,7 @@
 #include <sys/time.h>
 #include <string.h>
 #include <getopt.h>
+#include <limits.h>
 
 
 #define MILLION (1000000)
@@ -26,6 +30,7 @@ struct statistic {
 
 struct worker_args {
     int index;
+    char* p_workdir;
     size_t filesize;
     int filenum;
     int begin_index;
@@ -138,6 +143,7 @@ void * worker(void* param)
     int begin_index = args->begin_index;
     int speed = args->speed;
     int frames = args->frames;
+    char* workdir = args->p_workdir;
     struct statistic* stat = args->stat;
 
     initialize_statistic(stat);
@@ -165,7 +171,16 @@ void * worker(void* param)
     int loop = 0 ; 
 
     int *hist = (int*) malloc(N_HIST*(sizeof(int)));
-
+    int ret ; 
+    if (strlen(workdir) != 0)
+    {
+	ret = chdir(workdir);
+	if(ret !=0)
+	{
+	    fprintf(stderr,"failed to change work dir to %s\n",workdir);
+	    return NULL;
+	}
+    }
 
     for(i = 0; i < filenum ; i++)
     {
@@ -250,7 +265,8 @@ void * worker(void* param)
 
 void usage()
 {
-    fprintf(stdout, "streamwriter -p thread_num -s speed -n filenum -f frames_num -S filesize  -b begin_index\n");
+    fprintf(stdout, "streamwriter -d dest_dir -p thread_num -s speed -n filenum -f frames_num -S filesize  -b begin_index\n");
+    fprintf(stdout, "-d   --workdir    destination directory\n");
     fprintf(stdout, "-p   --parallel   thread num in parallel\n");
     fprintf(stdout, "-s   --speed      write speed in every single thread (KB/s)\n");
     fprintf(stdout, "-f   --frames     frames we should write in one second \n");
@@ -262,6 +278,7 @@ void usage()
 int main(int argc, char* argv[])
 {
     static struct option long_options[] = {
+	{"workdir",  required_argument, 0, 'd'},
 	{"thread_num",  required_argument, 0, 'p'},
 	{"speed",  required_argument, 0, 's'},
 	{"size",  required_argument, 0, 'S'},
@@ -271,7 +288,7 @@ int main(int argc, char* argv[])
     };
 
     int c;
-    const char* short_options = "h?p:s:f:S:n:b:";
+    const char* short_options = "h?d:p:s:f:S:n:b:";
 
     int option_index = 0;
 
@@ -282,11 +299,37 @@ int main(int argc, char* argv[])
     int file_num = 0;
     int begin_index = 0 ;
     struct statistic summary ; 
+    char *workdir = (char*)malloc(PATH_MAX+1);
 
+    struct stat statbuf;
+    int ret ;
+    char *res;
+
+    memset(workdir,'\0', PATH_MAX+1);
     while((c = getopt_long(argc, argv, short_options, long_options, &option_index)) != -1)
     {
 	switch(c)
 	{
+	case 'd':
+	    res = realpath(optarg, workdir);
+	    if(!res)
+	    {
+	        fprintf(stderr, "failed to get realpath for %s\n", optarg);
+		exit(1);
+	    }
+
+	    ret = stat(workdir,&statbuf);
+	    if(ret !=0 )
+	    {
+	        fprintf(stderr,"failed to stat workdir %s\n", workdir);
+		exit(1);
+	    }
+	    if(!S_ISDIR(statbuf.st_mode))
+	    {
+	        fprintf(stderr, "workdir (%s) is not directory\n",workdir);
+		exit(1);
+	    }
+	    break;
 	case 'p':
 	    thread_num = atoi(optarg);
 	    break;
@@ -324,7 +367,6 @@ int main(int argc, char* argv[])
     }
 
     int idx = 0 ; 
-    daemon(1,1);
 
     pthread_t *tids =(pthread_t*) malloc(thread_num*sizeof(pthread_t));
     struct worker_args *args_array = (struct worker_args*)malloc(thread_num*sizeof(struct worker_args)) ; 
@@ -332,6 +374,7 @@ int main(int argc, char* argv[])
     for(idx = 0 ; idx < thread_num; idx++)
     {
 	args_array[idx].filesize = filesize;
+	args_array[idx].p_workdir = workdir;
 	args_array[idx].filenum = file_num;
 	args_array[idx].begin_index = begin_index;
 	args_array[idx].speed = speed;
