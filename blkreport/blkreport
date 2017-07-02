@@ -78,9 +78,15 @@ def do_cmd(cmd, timeout=0, force=False):
         else:
             raise DoCommandError(err, p.returncode, output)
 
-
     return output
 
+def gen_iops_png(device):
+    cmd_str= "bash gen_iops_png.sh {}".format(device)
+    do_cmd(cmd_str)
+   
+def gen_mbps_png(device):
+    cmd_str= "bash gen_mbps_png.sh {}".format(device)
+    do_cmd(cmd_str)
 
 def gen_q2c_png(device):
     cmd_str= "bash gen_latency_png.sh {} q2c".format(device)
@@ -89,6 +95,7 @@ def gen_q2c_png(device):
 def gen_d2c_png(device):
     cmd_str= "bash gen_latency_png.sh {} d2c".format(device)
     do_cmd(cmd_str)
+
 
 def gen_btt_result(device):
     cmd_str = "btt -i {0}.blktrace.bin > {0}.btt.result".format(device)
@@ -101,7 +108,7 @@ def gen_inteval_table(btt_file,outfile, filed_num):
     attr_values = ['phase', 'MIN', 'AVG', 'MAX', 'NUM']
     
     with open(outfile, 'a') as f:
-        f.write("# Statistic of all Interval\n")
+        f.write("\n# Statistic of all Interval\n")
         for i in range(filed_num):
             f.write('|    ')
         f.write('|\n')
@@ -125,28 +132,58 @@ def gen_inteval_table(btt_file,outfile, filed_num):
 
             f.write('|\n')
             
-def gen_latency_picture(device,outfile,latency_type):
+def gen_latency_section(device,outfile,latency_type):
     png_file = "{}.{}_latency.png".format(device,latency_type)
     with open(outfile, 'a') as f:
-        f.write("# {} {} Latency Distribution\n".format(device, latency_type.upper()))
+        f.write("\n# {} {} Latency Distribution\n".format(device, latency_type.upper()))
         f.write("![{} {}]({})".format(device, latency_type.upper(), png_file))
+        f.write('\n')
+
+def gen_iops_section(device,outfile):
+    png_file = "{}_iops.png".format(device)
+    with open(outfile, 'a') as f:
+        f.write("\n# {} IOPS\n".format(device))
+        f.write("![{} {}]({})".format(device, 'IOPS', png_file))
+        f.write('\n')
+
+
+def gen_mbps_section(device,outfile):
+    png_file = "{}_mbps.png".format(device)
+    with open(outfile, 'a') as f:
+        f.write("\n# {} MBPS\n".format(device))
+        f.write("![{} {}]({})".format(device, 'IOPS', png_file))
         f.write('\n')
 
 def gen_output_md(device,outfile):
     btt_file = "{}.btt.result".format(device)
+
+    gen_iops_section(device, outfile)
+    gen_mbps_section(device, outfile)
+
     gen_inteval_table(btt_file, outfile, 5)
 
-    gen_latency_picture(device,outfile, 'd2c')
-    gen_latency_picture(device,outfile, 'q2c')
+    gen_latency_section(device,outfile, 'd2c')
+    gen_latency_section(device,outfile, 'q2c')
 
-    
+
+def gen_output_pdf(outfile):
+    if outfile[-3:] == ".md":
+        out = outfile[:-2] + 'pdf'
+    else:
+        out = outfile + '.pdf'
+
+    if os.path.isfile('/usr/bin/pandoc'):
+        do_cmd('/usr/bin/pandoc -t beamer -o {} {}'.format(out,outfile))
       
 def process_info(device, outfile):
+    gen_iops_png(device)
+    gen_mbps_png(device)
     gen_q2c_png(device)
     gen_d2c_png(device)
     gen_btt_result(device)
 
     gen_output_md(device,outfile)
+    gen_output_pdf(outfile)
 
 
 
