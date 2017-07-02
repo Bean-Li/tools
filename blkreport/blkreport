@@ -95,6 +95,7 @@ def gen_btt_result(device):
     do_cmd(cmd_str)
 
 
+
 def gen_inteval_table(btt_file,outfile, filed_num):
     keys = ['Q2Q', 'Q2G', 'G2I', 'I2D', 'D2C', 'Q2C']
     attr_values = ['phase', 'MIN', 'AVG', 'MAX', 'NUM']
