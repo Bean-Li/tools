@@ -1,0 +1,191 @@
+#!/usr/bin/env python
+
+import os
+import sys
+import glob
+import subprocess
+import multiprocessing
+from optparse import OptionParser
+
+def bash_quoted(var):
+    escaped = ""
+    for chr in var:
+        if chr in ('$`\\"'):
+            escaped += "\\"
+        escaped += chr
+    return u'"{}"'.format(escaped)
+
+class DoCommandTimedOut(RuntimeError):
+    pass
+
+
+class DoCommandError(RuntimeError):
+    def __init__(self, stderr, errno=0, stdout=''):
+        RuntimeError.__init__(self, stderr)
+        self.errno, self.stdout, self.stderr = errno, stdout, stderr
+
+    def __str__(self):
+        return "DoCommandError: errno {} stdout '{}' stderr '{}'" \
+               .format(self.errno, self.stdout, self.stderr)
+
+def do_cmd(cmd, timeout=0, force=False):
+
+    cmdstr = cmd.encode('utf-8')
+    if timeout <= 0:
+        p = subprocess.Popen([cmdstr],
+                             stdout=subprocess.PIPE,
+                             stderr=subprocess.PIPE,
+                             shell=True,
+                             close_fds=True)
+        (output, err) = p.communicate()
+    else:
+        with tempfile.TemporaryFile('w+') as outfp:
+            with tempfile.TemporaryFile('w+') as errfp:
+                p = subprocess.Popen([cmdstr],
+                                     stdout=outfp,
+                                     stderr=errfp,
+                                     shell=True,
+                                     close_fds=True)
+                while p.poll() is None:
+                    t = min(timeout, 0.1)
+                    time.sleep(t)
+                    timeout -= t
+                    if timeout <= 0:
+                        proc = psutil.Process(p.pid)
+                        for c in proc.children(recursive=True):
+                            c.kill()
+                        proc.kill()
+                        if force:
+                            return ""
+                        else:
+                            raise DoCommandTimedOut(
+                                u"command '{}' timeout".format(cmd)
+                            )
+
+                outfp.flush()   # don't know if this is needed
+                outfp.seek(0)
+                output = outfp.read()
+                errfp.flush()   # don't know if this is needed
+                errfp.seek(0)
+                err = errfp.read()
+
+    # prevent UnicodeDecodeError if invalid char in error/output
+    err_str = unicode(err, 'utf-8', 'ignore')
+    out_str = unicode(output, 'utf-8', 'ignore')
+    if p.returncode != 0:
+        if force:
+            return ""
+        else:
+            raise DoCommandError(err, p.returncode, output)
+
+
+    return output
+
+
+def gen_q2c_png(device):
+    cmd_str= "bash gen_latency_png.sh {} q2c".format(device)
+    do_cmd(cmd_str)
+
+def gen_d2c_png(device):
+    cmd_str= "bash gen_latency_png.sh {} d2c".format(device)
+    do_cmd(cmd_str)
+
+def gen_btt_result(device):
+    cmd_str = "btt -i {0}.blktrace.bin > {0}.btt.result".format(device)
+    do_cmd(cmd_str)
+
+
+def gen_inteval_table(btt_file,outfile, filed_num):
+    keys = ['Q2Q', 'Q2G', 'G2I', 'I2D', 'D2C', 'Q2C']
+    attr_values = ['phase', 'MIN', 'AVG', 'MAX', 'NUM']
+    
+    with open(outfile, 'a') as f:
+        f.write("# Statistic of all Interval\n")
+        for i in range(filed_num):
+            f.write('|    ')
+        f.write('|\n')
+
+        for i in range(filed_num):
+            f.write('| ---- ')
+        f.write('|\n')
+
+        for i in range(filed_num):
+            f.write('|{}'.format(attr_values[i]))
+        f.write('|\n')
+
+        for key in keys:
+            line = do_cmd("grep ^{} {}".format(key, btt_file), force=True)
+            current_array = line.split()
+            if len(current_array) != filed_num:
+                continue
+
+            for i in range(filed_num):
+                f.write("|{}".format(current_array[i]))
+
+            f.write('|\n')
+            
+def gen_latency_picture(device,outfile,latency_type):
+    png_file = "{}.{}_latency.png".format(device,latency_type)
+    with open(outfile, 'a') as f:
+        f.write("# {} {} Latency Distribution\n".format(device, latency_type.upper()))
+        f.write("![{} {}]({})".format(device, latency_type.upper(), png_file))
+        f.write('\n')
+
+def gen_output_md(device,outfile):
+    btt_file = "{}.btt.result".format(device)
+    gen_inteval_table(btt_file, outfile, 5)
+
+    gen_latency_picture(device,outfile, 'd2c')
+    gen_latency_picture(device,outfile, 'q2c')
+
+    
+      
+def process_info(device, outfile):
+    gen_q2c_png(device)
+    gen_d2c_png(device)
+    gen_btt_result(device)
+
+    gen_output_md(device,outfile)
+
+
+
+
+def main(argv=None):
+    if argv == None:
+        argv = sys.argv
+
+
+    usage = "Usage: %prog [options]"
+    parser = OptionParser(usage=usage)
+    parser.add_option(
+        "-d", "--device",
+        dest="device",
+        help="device which we try to analyze"
+    )
+
+    parser.add_option(
+        "-o", "--output",
+        dest="output",
+        help="md format output to record the result"
+    )
+
+    (options, args) = parser.parse_args()
+
+    if options.device is None:
+        print("You must specify the device you try to analyze")
+        exit(1)
+    if options.output is None:
+        print("You did not specify the result file")
+        exit(1)
+
+    target_files = glob.glob("./{}.blktrace.*".format(options.device))
+    if len(target_files) == 0 :
+        print("I can not found blktrace raw file for {}".format(options.device))
+        exit(2)
+
+    return process_info(options.device, options.output)
+
+
+
+if __name__ == "__main__":
+    sys.exit(main())
