@@ -96,11 +96,13 @@ def gen_d2c_png(device):
     cmd_str= "bash gen_latency_png.sh {} d2c".format(device)
     do_cmd(cmd_str)
 
+def gen_offset_pattern_png(device):
+    cmd_str= "bash gen_offset_pattern_png.sh {}".format(device)
+    do_cmd(cmd_str)
 
 def gen_btt_result(device):
     cmd_str = "btt -i {0}.blktrace.bin > {0}.btt.result".format(device)
     do_cmd(cmd_str)
-
 
 
 def gen_inteval_table(btt_file,outfile, filed_num):
@@ -154,6 +156,13 @@ def gen_mbps_section(device,outfile):
         f.write("![{} {}]({})".format(device, 'IOPS', png_file))
         f.write('\n')
 
+def gen_offset_pattern_section(device, outfile):
+    png_file = "{}_offset_pattern.png".format(device)
+    with open(outfile, 'a') as f:
+        f.write("\n# {} Offset Pattern\n".format(device))
+        f.write("![{} {}]({})".format(device, 'offset', png_file))
+        f.write('\n')
+    
 def gen_output_md(device,outfile):
     btt_file = "{}.btt.result".format(device)
 
@@ -164,6 +173,7 @@ def gen_output_md(device,outfile):
 
     gen_latency_section(device,outfile, 'd2c')
     gen_latency_section(device,outfile, 'q2c')
+    gen_offset_pattern_section(device, outfile)
 
 
 def gen_output_pdf(outfile):
@@ -174,13 +184,14 @@ def gen_output_pdf(outfile):
 
     if os.path.isfile('/usr/bin/pandoc'):
         do_cmd('/usr/bin/pandoc -t beamer -o {} {}'.format(out,outfile))
-      
+     
 def process_info(device, outfile):
     gen_iops_png(device)
     gen_mbps_png(device)
     gen_q2c_png(device)
     gen_d2c_png(device)
     gen_btt_result(device)
+    gen_offset_pattern_png(device)
 
     gen_output_md(device,outfile)
     gen_output_pdf(outfile)
