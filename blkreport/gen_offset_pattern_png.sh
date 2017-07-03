@@ -38,3 +38,14 @@ set output
 set terminal wxt
 " | /usr/bin/gnuplot
 
+echo "
+set terminal pngcairo lw 2
+set title \"$device offset \"
+set xlabel \"time (second)\"
+set ylabel \"offset (# block)\"
+set output '${device}_offset.png'
+plot \"$filename\" u 1:2 w lp pt 7 title \"offset of device\" 
+set output
+set terminal wxt
+" | /usr/bin/gnuplot
+
