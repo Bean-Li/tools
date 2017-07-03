@@ -100,6 +100,10 @@ def gen_offset_pattern_png(device):
     cmd_str= "bash gen_offset_pattern_png.sh {}".format(device)
     do_cmd(cmd_str)
 
+def gen_seek_freq_png(device):
+    cmd_str= "bash gen_seek_freq_png.sh {}".format(device)
+    do_cmd(cmd_str)
+
 def gen_btt_result(device):
     cmd_str = "btt -i {0}.blktrace.bin > {0}.btt.result".format(device)
     do_cmd(cmd_str)
@@ -157,12 +161,23 @@ def gen_mbps_section(device,outfile):
         f.write('\n')
 
 def gen_offset_pattern_section(device, outfile):
-    png_file = "{}_offset_pattern.png".format(device)
+    png_3d_file = "{}_offset_pattern.png".format(device)
+    png_2d_file = "{}_offset.png".format(device)
     with open(outfile, 'a') as f:
-        f.write("\n# {} Offset Pattern\n".format(device))
-        f.write("![{} {}]({})".format(device, 'offset', png_file))
+        f.write("\n# Offset Pattern 2D\n".format(device))
+        f.write("![{} {}]({})".format(device, 'offset 2d', png_2d_file))
+        f.write('\n')
+        f.write("\n# Offset Pattern 3D\n".format(device))
+        f.write("![{} {}]({})".format(device, 'offset 3d', png_3d_file))
         f.write('\n')
     
+def gen_seek_freq_section(device,outfile):
+    png_file = "{}_seek_freq.png".format(device)
+    with open(outfile, 'a') as f:
+        f.write("\n# {} # of seeks\n".format(device))
+        f.write("![{} {}]({})".format(device, 'seek', png_file))
+        f.write('\n')
+
 def gen_output_md(device,outfile):
     btt_file = "{}.btt.result".format(device)
 
@@ -174,6 +189,7 @@ def gen_output_md(device,outfile):
     gen_latency_section(device,outfile, 'd2c')
     gen_latency_section(device,outfile, 'q2c')
     gen_offset_pattern_section(device, outfile)
+    gen_seek_freq_section(device, outfile)
 
 
 def gen_output_pdf(outfile):
@@ -190,6 +206,7 @@ def process_info(device, outfile):
     gen_mbps_png(device)
     gen_q2c_png(device)
     gen_d2c_png(device)
+    gen_seek_freq_png(device)
     gen_btt_result(device)
     gen_offset_pattern_png(device)
 

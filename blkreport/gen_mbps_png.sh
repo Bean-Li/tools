@@ -18,7 +18,9 @@ fi
 
 
 
-blkparse -i $device -d $device.blktrace.bin  > /dev/null
+if [ ! -e $device.blktrace.bin ]; then
+    blkparse -i $device -d $device.blktrace.bin  > /dev/null
+fi
 
 btt -i $device.blktrace.bin -q $device.q2c_latency > /dev/null 
 

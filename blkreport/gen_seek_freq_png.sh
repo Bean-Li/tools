@@ -17,19 +17,21 @@ if [ x"$device" = x"" ];then
 fi
 
 
+
 if [ ! -e $device.blktrace.bin ]; then
     blkparse -i $device -d $device.blktrace.bin  > /dev/null
 fi
-btt -i $device.blktrace.bin -q $device.q2c_latency > /dev/null 
 
-filename="sys_iops_fp.dat"
+btt -i $device.blktrace.bin -m seek_freq -s seek  > /dev/null 
+
+filename=$(ls seek_freq*)
 
 echo "
 set terminal pngcairo lw 2
-set title \"$device IOPS\"
-set xlabel \"time\"
-set ylabel \"IOPS\"
-set output '${device}_iops.png'
+set title \"$device seek times\"
+set xlabel \"time (second)\"
+set ylabel \"seek times\"
+set output '${device}_seek_freq.png'
 plot \"$filename\" w lp pt 7 title \"IOPS\" 
 set output
 set terminal wxt
