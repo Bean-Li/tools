@@ -43,7 +43,7 @@ set title \"$device ${l_type^^} latency\"
 set xlabel \"time\"
 set ylabel \"$type latency\"
 set output '$device.${l_type}_latency.png'
-plot \"$filename\" 
+plot \"$filename\" title \"latency\" 
 set output
 set terminal wxt
 " | /usr/bin/gnuplot

@@ -30,7 +30,7 @@ echo "
 set terminal pngcairo lw 2
 set title \"$device MBPS\"
 set xlabel \"time\"
-set ylabel \"IOPS\"
+set ylabel \"MBPS\"
 set output '${device}_mbps.png'
 plot \"$filename\" w lp pt 7 title \"MBPS\" 
 set output
