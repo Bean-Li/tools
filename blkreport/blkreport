@@ -171,6 +171,13 @@ def gen_offset_pattern_section(device, outfile):
         f.write("![{} {}]({})".format(device, 'offset 3d', png_3d_file))
         f.write('\n')
     
+def gen_iosize_hist_section(device,outfile):
+    png_file = "{}_iosize_hist.png".format(device)
+    with open(outfile, 'a') as f:
+        f.write("\n# {} # IO SIZE Historgram\n".format(device))
+        f.write("![{} {}]({})".format(device, 'IO SIZE Historgram', png_file))
+        f.write('\n')
+
 def gen_seek_freq_section(device,outfile):
     png_file = "{}_seek_freq.png".format(device)
     with open(outfile, 'a') as f:
@@ -183,6 +190,7 @@ def gen_output_md(device,outfile):
 
     gen_iops_section(device, outfile)
     gen_mbps_section(device, outfile)
+    gen_iosize_hist_section(device, outfile)
 
     gen_inteval_table(btt_file, outfile, 5)
 
