@@ -27,7 +27,7 @@ btt -i $device.blktrace.bin -q $device.q2c_latency > /dev/null
 filename="sys_mbps_fp.dat"
 
 echo "
-set terminal pngcairo lw 2
+set terminal pngcairo enhanced font 'arial,10' fontscale 1.0 size 800, 600  
 set title \"$device MBPS\"
 set xlabel \"time\"
 set ylabel \"MBPS\"

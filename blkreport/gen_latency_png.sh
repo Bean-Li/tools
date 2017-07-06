@@ -38,7 +38,7 @@ fi
 filename=$(ls $device.${l_type}_latency*.dat)
 
 echo "
-set terminal pngcairo lw 2
+set terminal pngcairo enhanced font 'arial,10' fontscale 1.0 size 800, 600  
 set title \"$device ${l_type^^} latency\"
 set xlabel \"time\"
 set ylabel \"$type latency\"

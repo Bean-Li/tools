@@ -28,11 +28,11 @@ filename=`ls ${device}.offset*_c.dat`
 awk '{print $1,$2,$3-$2}' $filename >${filename}.new
 
 echo "
-set terminal pngcairo lw 2
+set terminal pngcairo enhanced font 'arial,10' fontscale 1.0 size 800, 600  
 set title \"$device Generate Block access\"
 set xlabel \"Time (second)\"
 set ylabel \"Block Number\"
-set zlabel \"# Blocks Per IO\"
+set zlabel \"# Blocks Per IO\" rotate by 90
 set xtics rotate by 60
 set grid
 set output '${device}_offset_pattern.png'
@@ -42,7 +42,7 @@ set terminal wxt
 " | /usr/bin/gnuplot
 
 echo "
-set terminal pngcairo lw 2
+set terminal pngcairo enhanced font 'arial,10' fontscale 1.0 size 800, 600  
 set title \"$device offset \"
 set xlabel \"time (second)\"
 set ylabel \"offset (# block)\"
@@ -68,9 +68,9 @@ set ylabel \"% of Total I/O\"
 set xlabel \"I/O Size\"      
 set title \"I/O Distribution by I/O Size \" 
 set style histogram rowstacked  
-set boxwidth 0.25 relative 
+set boxwidth 0.50 relative 
 set style fill transparent solid 0.5 noborder 
-set xtics rotate by 90   
+set xtics rotate by -45   
 set grid  
 set ytics 5 
 set output '${device}_iosize_hist.png' 

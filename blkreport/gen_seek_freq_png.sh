@@ -27,7 +27,7 @@ btt -i $device.blktrace.bin -m seek_freq -s seek  > /dev/null
 filename=$(ls seek_freq*)
 
 echo "
-set terminal pngcairo lw 2
+set terminal pngcairo enhanced font 'arial,10' fontscale 1.0 size 800, 600  
 set title \"$device seek times\"
 set xlabel \"time (second)\"
 set ylabel \"seek times\"
