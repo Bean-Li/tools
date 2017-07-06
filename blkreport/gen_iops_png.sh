@@ -27,7 +27,7 @@ filename="sys_iops_fp.dat"
 echo "
 set terminal pngcairo enhanced font 'arial,10' fontscale 1.0 size 800, 600  
 set title \"$device IOPS\"
-set xlabel \"time\"
+set xlabel \"time (second)\"
 set ylabel \"IOPS\"
 set output '${device}_iops.png'
 plot \"$filename\" w lp pt 7 title \"IOPS\" 

@@ -40,7 +40,7 @@ filename=$(ls $device.${l_type}_latency*.dat)
 echo "
 set terminal pngcairo enhanced font 'arial,10' fontscale 1.0 size 800, 600  
 set title \"$device ${l_type^^} latency\"
-set xlabel \"time\"
+set xlabel \"time (second)\"
 set ylabel \"$type latency\"
 set output '$device.${l_type}_latency.png'
 plot \"$filename\" title \"latency\" 

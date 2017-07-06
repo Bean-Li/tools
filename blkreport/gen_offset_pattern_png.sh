@@ -65,7 +65,7 @@ set terminal pngcairo enhanced font 'arial,10' fontscale 1.0 size 800, 600
 set auto x   
 set yrange [0:100] 
 set ylabel \"% of Total I/O\"  
-set xlabel \"I/O Size\"      
+set xlabel \"I/O Size (sector)\"      
 set title \"I/O Distribution by I/O Size \" 
 set style histogram rowstacked  
 set boxwidth 0.50 relative 
