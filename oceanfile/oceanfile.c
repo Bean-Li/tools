@@ -19,6 +19,7 @@ int thread_num = 0;
 char arch[1024+1] ; 
 char type[1024+1] ;
 int  dir_only = 0 ; 
+int  skip_dir = 0;
 
 
 void usage()
@@ -83,11 +84,10 @@ static int print_statistic(struct operation_stat* stat)
     fprintf(stdout, "write_success   : %12d\n", stat->write_success);
     fprintf(stdout, "write_fail      : %12d\n", stat->write_fail);
 
-
     fprintf(stdout, "---------------------------------------------\n");
 
     return 0;
-    
+
 }
 
 static void print_statistic_and_exit()
@@ -102,20 +102,20 @@ static void print_statistic_and_exit()
         total_stat.mkdir_eexist     += statistic[i]->mkdir_eexist ;    
         total_stat.mkdir_fail       += statistic[i]->mkdir_fail;
 
-	total_stat.create_success   += statistic[i]->create_success ;
-	total_stat.open_success     += statistic[i]->open_success ;
-	total_stat.create_eexist    += statistic[i]->create_eexist ;
-	total_stat.open_fail        += statistic[i]->open_fail ;
-	total_stat.create_fail      += statistic[i]->create_fail ;
+        total_stat.create_success   += statistic[i]->create_success ;
+        total_stat.open_success     += statistic[i]->open_success ;
+        total_stat.create_eexist    += statistic[i]->create_eexist ;
+        total_stat.open_fail        += statistic[i]->open_fail ;
+        total_stat.create_fail      += statistic[i]->create_fail ;
 
-	total_stat.write_success    += statistic[i]->write_success ;
-	total_stat.write_fail       += statistic[i]->write_fail ;
+        total_stat.write_success    += statistic[i]->write_success ;
+        total_stat.write_fail       += statistic[i]->write_fail ;
     }
 
     print_statistic(&total_stat) ;
     return ;
-    
-   
+
+
 }
 
 struct dir_desc{
@@ -185,7 +185,8 @@ int process_level_dir(struct arch_desc* a_desc,  int level, int thread_idx)
         else
         {
             strerror_r(errno, errmsg, sizeof(errmsg));
-            fprintf(stderr, "failed to mkdir %s (%s)\n", path_buf, errmsg);
+            fprintf(stderr, "THREAD-%4d failed to mkdir %s (%d: %s)\n",
+                    thread_idx, path_buf, errno, errmsg);
             stat->mkdir_fail++;
         }
     }
@@ -273,8 +274,8 @@ int process_level_file(struct arch_desc* a_desc,  int level, int thread_idx)
             if(fd < 0)
             {
                 strerror_r(errno, errmsg, sizeof(errmsg));
-                fprintf(stderr, "THREAD-%3d: failed to open %s (%s)\n",
-                        thread_idx, path_buf,errmsg);
+                fprintf(stderr, "THREAD-%-4d: failed to open %s (%d: %s)\n",
+                        thread_idx, path_buf, errno, errmsg);
                 stat->open_fail++ ;
                 continue;
             }
@@ -287,7 +288,9 @@ int process_level_file(struct arch_desc* a_desc,  int level, int thread_idx)
         {
             stat->create_fail++;
             stat->open_fail++;
-            fprintf(stderr, "THREAD-%3d: failed to open %s\n",thread_idx, path_buf);
+            strerror_r(errno, errmsg, sizeof(errmsg));
+            fprintf(stderr, "THREAD-%-4d: failed to create %s (%d: %s)\n",
+                    thread_idx, path_buf, errno, errmsg);
             continue;
         }
 
@@ -298,6 +301,9 @@ int process_level_file(struct arch_desc* a_desc,  int level, int thread_idx)
         }
         else
         {
+            strerror_r(errno, errmsg, sizeof(errmsg));
+            fprintf(stderr, "THREAD-%-4d: failed to write %s (%d: %s)\n",
+                    thread_idx, path_buf, errno, errmsg);
             stat->write_fail++ ; 
         }
 
@@ -317,7 +323,7 @@ int process_level(struct arch_desc* a_desc, int level, int thread_idx)
         ret = chdir(workdir);
         if(ret !=0)
         {
-            fprintf(stderr,"THREAD-%3d: failed to change work dir to %s\n",thread_idx, workdir);
+            fprintf(stderr,"THREAD-%-4d: failed to change work dir to %s\n",thread_idx, workdir);
             return -1;
         }
     }
@@ -423,9 +429,18 @@ void * work_thread(void* param)
         a_desc->d_desc[i]->end =   end_in_charge / (a_desc->d_desc[i]->base) ;
     }
 
-    for(i = 0 ; i < a_desc->total_level ; i++)
+    /*if skip_dir is true, we suppose all the dir have create already (except
+     * the last level). So we only proecss the last level*/
+    if(skip_dir == 1)
     {
-        process_level(a_desc, i, idx);
+        process_level(a_desc, a_desc->total_level - 1, idx);
+    }
+    else
+    {
+        for(i = 0 ; i < a_desc->total_level ; i++)
+        {
+            process_level(a_desc, i, idx);
+        }
     }
 
 err_ret:
@@ -442,6 +457,7 @@ err_ret:
         free(a_desc);
         a_desc = NULL ;
     }
+
     if(arch_dup)
     {
         free(arch_dup);
@@ -467,6 +483,7 @@ int main(int argc , char* argv[])
     static struct option long_options[] = {
         {"workdir",       required_argument, 0, 'd'},
         {"dironly",       no_argument,       0, 'D'},
+        {"skipdir",       no_argument,       0, 's'},
         {"parallel",      required_argument, 0, 'p'},
         {"arch",          required_argument, 0, 'a'},
         {"type",          required_argument, 0, 't'},
@@ -477,7 +494,7 @@ int main(int argc , char* argv[])
     memset(arch, '\0', 1024 + 1);
     memset(type, '\0', 1024 + 1);
 
-    while((ch = getopt_long(argc, argv, "h?d:p:a:t:D", long_options, &option_index)) != -1)
+    while((ch = getopt_long(argc, argv, "h?d:p:a:t:DS", long_options, &option_index)) != -1)
     {
         switch(ch)
         {
@@ -492,7 +509,8 @@ int main(int argc , char* argv[])
             ret = stat(workdir,&statbuf);
             if(ret !=0 )
             {
-                fprintf(stderr,"failed to stat workdir %s\n", workdir);
+                strerror_r(errno, errmsg, sizeof(errmsg));
+                fprintf(stderr,"failed to stat workdir %s (%d: %s)\n", workdir, errno, errmsg);
                 exit(1);
             }
             if(!S_ISDIR(statbuf.st_mode))
@@ -504,6 +522,10 @@ int main(int argc , char* argv[])
 
         case 'D':
             dir_only = 1;
+            break;
+
+        case 'S':
+            skip_dir = 1;
             break;
 
         case 'p':
@@ -540,7 +562,8 @@ int main(int argc , char* argv[])
         res = realpath(".", workdir);
         if(res == NULL) 
         {
-            fprintf(stderr,"failed to translate cwd to workdir\n");
+            strerror_r(errno, errmsg, sizeof(errmsg));
+            fprintf(stderr,"failed to translate cwd to workdir (%d: %s)\n", errno, errmsg);
             exit(1);
         }
     }
@@ -572,7 +595,7 @@ int main(int argc , char* argv[])
             fprintf(stderr, "failed to malloc statistic[%d]\n", i);
             exit(2);
         }
-	init_statistic(statistic[i]);
+        init_statistic(statistic[i]);
     }
 
     pthread_t *tid_array = (pthread_t*) malloc(thread_num * sizeof(pthread_t));
