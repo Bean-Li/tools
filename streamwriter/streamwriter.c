@@ -44,6 +44,7 @@ struct worker_args {
 int thread_num = 0 ;
 struct statistic summary ;
 struct worker_args* args_array = NULL ;
+int buffering = 0 ;
 
 
 int initialize_statistic(struct statistic* stat)
@@ -94,7 +95,8 @@ int print_header(int thread_num, int speed, int frame, int filesize,
     fprintf(stdout,"frame rate           : %d (frames/s)\n",frame);
     fprintf(stdout,"single file size     : %d (MB)\n",(filesize/1024/1024));
     fprintf(stdout,"filenum per thread   : %d\n",filenum);
-    fprintf(stdout,"filename begin_index : %d\n\n",begin_index);
+    fprintf(stdout,"filename begin_index : %d\n",begin_index);
+    fprintf(stdout,"buffering writer     : %s\n\n",buffering == 0?"false":"true");
     return 0;
 }
 int print_summary(struct statistic* summary)
@@ -197,6 +199,7 @@ void * worker(void* param)
     ssize_t current_size = 0; 
     char filename[256];
     int fd = 0;
+    FILE* fp = NULL ;
     unsigned long long tm_begin, tm_end, current_us;
     unsigned long long sleep_time_us;
     int time_slice;
@@ -220,12 +223,24 @@ void * worker(void* param)
     {
         memset(filename,0,256);
         snprintf(filename, 256,"%d-%d-%d.mp4",begin_index, index, i);
-        fd = open(filename, O_CREAT|O_RDWR, S_IRWXU|S_IRGRP|S_IROTH);
-        if(fd < 0)
-        {
-            fprintf(stderr,"failed to open %s (errno: %d)\n", filename, errno);
-            pthread_exit(NULL);
-        }
+	if (buffering == 0)
+	{
+	    fd = open(filename, O_CREAT|O_RDWR, S_IRWXU|S_IRGRP|S_IROTH);
+	    if(fd < 0)
+	    {
+		fprintf(stderr,"failed to open %s (errno: %d)\n", filename, errno);
+		pthread_exit(NULL);
+	    }
+	}
+	else
+	{
+	    fp = fopen(filename, "w+");
+	    if(fp == NULL)
+	    {
+		fprintf(stderr,"failed to fopen %s (errno: %d)\n", filename, errno);
+		pthread_exit(NULL);
+	    }
+	}
 
         time_slice = (1000000/frames);
 
@@ -247,7 +262,14 @@ void * worker(void* param)
             else
                 current_size = filesize - length;
 
-            write_bytes = r_write(fd, buffer, current_size);
+	    if(buffering == 0)
+	    {
+                write_bytes = r_write(fd, buffer, current_size);
+	    }
+	    else
+	    {
+	        write_bytes = fwrite(buffer,1,current_size,fp);
+	    }
             if(write_bytes < 0 || write_bytes != current_size)
             {
                 fprintf(stderr,"failed to write %s (%zd)",filename, length);
@@ -291,7 +313,10 @@ void * worker(void* param)
                 stat->drop_frame++;
             }
         }
-        close(fd);
+	if(buffering == 0)
+            close(fd);
+	else
+	    fclose(fp);
     }
 
     return NULL;
@@ -299,7 +324,7 @@ void * worker(void* param)
 
 void usage()
 {
-    fprintf(stdout, "streamwriter -d dest_dir -p thread_num -s speed -n filenum -f frames_num -S filesize  -b begin_index\n");
+    fprintf(stdout, "streamwriter -d dest_dir -p thread_num -s speed -n filenum -f frames_num -S filesize  -b begin_index [-B]\n");
     fprintf(stdout, "-d   --workdir    destination directory\n");
     fprintf(stdout, "-p   --parallel   thread num in parallel\n");
     fprintf(stdout, "-s   --speed      write speed in every single thread (KB/s)\n");
@@ -307,6 +332,7 @@ void usage()
     fprintf(stdout, "-n   --number     file numbers than every thread should generate \n");
     fprintf(stdout, "-S   --size       file size of each file  (MB)\n");
     fprintf(stdout, "-b   --prefix     file name's prefix \n");
+    fprintf(stdout, "-B   --buffering  use fwrite instead of write \n");
 }
 
 
@@ -314,17 +340,19 @@ void usage()
 int main(int argc, char* argv[])
 {
     static struct option long_options[] = {
-        {"workdir",  required_argument, 0, 'd'},
-        {"thread_num",  required_argument, 0, 'p'},
-        {"speed",  required_argument, 0, 's'},
-        {"size",  required_argument, 0, 'S'},
-        {"fnum",  required_argument, 0, 'n'},
-        {"frame",  required_argument, 0, 'f'},
-        {0, 0 , 0, 0}
+        {"workdir",        required_argument, 0, 'd'},
+        {"thread_num",     required_argument, 0, 'p'},
+        {"speed",          required_argument, 0, 's'},
+        {"size",           required_argument, 0, 'S'},
+        {"fnum",           required_argument, 0, 'n'},
+        {"frame",          required_argument, 0, 'f'},
+        {"prefix",         required_argument, 0, 'b'},
+        {"buffering",      no_argument,       0, 'B'},
+        {0,                0 ,                0, 0  }
     };
 
     int c;
-    const char* short_options = "h?d:p:s:f:S:n:b:";
+    const char* short_options = "h?d:p:s:f:S:n:b:B";
 
     int option_index = 0;
 
@@ -384,6 +412,9 @@ int main(int argc, char* argv[])
         case 'b':
             begin_index = atoi(optarg); 
             break;
+	case 'B':
+	    buffering = 1;
+	    break;
         case 'h':
         case '?':
             usage();
