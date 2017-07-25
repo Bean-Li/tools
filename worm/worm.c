@@ -24,7 +24,7 @@
 #include "fanotify-syscalllib.h"
 #include "dlist.h"
 
-#define FANOTIFY_ARGUMENTS "cdfhmnp"
+#define FANOTIFY_ARGUMENTS "cdfhmn"
 #define MAX_FILENAME 128
 #define TRUE 1
 #define FALSE 0
@@ -334,20 +334,6 @@ int mark_object(int fan_fd, const char *path, int fd, uint64_t mask, unsigned in
     return fanotify_mark(fan_fd, flags, mask, fd, path);
 }
 
-int set_special_ignored(int fan_fd, int fd, char *path)
-{
-    unsigned int flags = (FAN_MARK_ADD | FAN_MARK_IGNORED_MASK |
-            FAN_MARK_IGNORED_SURV_MODIFY);
-    uint64_t mask = FAN_ALL_EVENTS | FAN_ALL_PERM_EVENTS;
-
-    if (strcmp("/var/log/audit/audit.log", path) &&
-            strcmp("/var/log/messages", path) &&
-            strcmp("/var/log/wtmp", path) &&
-            strcmp("/var/run/utmp", path))
-        return 0;
-
-    return mark_object(fan_fd, NULL, fd, mask, flags);
-}
 
 int set_ignored_mask(int fan_fd, int fd, uint64_t mask)
 {
@@ -444,9 +430,6 @@ int main(int argc, char *argv[])
         case 'm':
                   opt_on_mount = true;
                   break;
-        case 'p':
-                  opt_add_perms = true;
-                  break;
         case 'h':
                   synopsis(argv[0], 0);
         default:  /* '?' */
@@ -462,8 +445,6 @@ int main(int argc, char *argv[])
     if (opt_on_mount)
         mark_flags |= FAN_MARK_MOUNT;
 
-    if (opt_add_perms)
-        fan_mask |= FAN_ALL_PERM_EVENTS;
 
     if (fan_mask & FAN_ALL_PERM_EVENTS)
         init_flags |= FAN_CLASS_CONTENT;
