@@ -46,6 +46,8 @@ int fan_fd;
 
 typedef struct dir_entry{
     char name[MAX_FILENAME+1];
+    time_t s_time ;
+    time_t e_time ;
 } dir_entry ;
 
 typedef struct dir_entry_node{
@@ -56,15 +58,55 @@ typedef struct dir_entry_node{
 struct list_head g_file_systems ; 
 static int pipefd[2];
 
-int add_worm_item(char* dirname, struct list_head *head)
+int add_worm_item(char* buffer , struct list_head *head)
 {
+    char delimit[2] = {'\t', '\0'};
+    char *last ; 
+    char* token ;
+
+    char dirname[PATH_MAX+1] = {'\0',} ;
+    time_t s_time = 0;
+    time_t e_time = LONG_MAX;
+    int idx = 0 ;
+    for(token  = strtok_r(buffer,delimit, &last);
+	token != NULL ;
+	token  = strtok_r(NULL, delimit, &last))
+    {
+        idx++ ;
+	if(idx == 1)
+	{
+	    strncpy(dirname,token,PATH_MAX) ;
+	}
+	else if(idx == 2)
+	{
+	    s_time = atoi(token);
+	}
+	else if(idx == 3)
+	{
+	    e_time = atoi(token);
+	}
+    }
+
+    if(strlen(dirname) == 0)
+    {
+        return 0;
+    }
+
+    time_t now = time(NULL);
+    if(e_time <= now)
+    {
+        /*worm expire*/
+	return 0;
+    }
+
     dir_entry_node *item = malloc(sizeof(struct dir_entry_node));
     if(item == NULL)
     {
         return -1;
     }
-
     strncpy(item->dirpath.name, dirname,MAX_FILENAME);
+    item->dirpath.s_time = s_time ;
+    item->dirpath.e_time = e_time ;
     list_add_tail(&(item->list),head); 
     return 0;
 
@@ -102,12 +144,15 @@ int reload_worm_conf(char* conf_path, struct list_head* head)
 
     char buffer[PATH_MAX+1];
     delete_worm_items(head) ;
+
     while(fgets(buffer,PATH_MAX,fp))
     {
         if(buffer[strlen(buffer) -1] == '\n')
         {
             buffer[strlen(buffer) - 1] = '\0';
         }
+
+        
         ret = add_worm_item(buffer, head);
         if(ret != 0)
             break;
@@ -203,6 +248,7 @@ int is_belong_to_worm_list(char* path,struct list_head* head)
 {
     struct dir_entry_node* current_node ; 
     struct list_head *current ;
+    struct timeval tv ; 
 
     current = head->next ; 
     while(current != head)
@@ -210,7 +256,14 @@ int is_belong_to_worm_list(char* path,struct list_head* head)
         current_node = list_entry(current,struct dir_entry_node, list);
         if(strncmp(current_node->dirpath.name, path, strlen(current_node->dirpath.name)) == 0)
         {
-            return TRUE; 
+	    gettimeofday(&tv, NULL);
+	    if (tv.tv_sec > current_node->dirpath.s_time &&
+		tv.tv_sec < current_node->dirpath.e_time
+	       )
+                return TRUE; 
+	    else
+		return FALSE;
+
         }
         current = current->next ;
     }
