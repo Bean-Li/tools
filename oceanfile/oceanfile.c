@@ -21,8 +21,8 @@ char arch[1024+1] ;
 char type[1024+1] ;
 int  dir_only = 0 ; 
 int  skip_dir = 0;
-int  buffer_sz = 4096 ;
-int  file_sz  =  4096 ;
+ssize_t  buffer_sz = 4096 ;
+ssize_t  file_sz  =  4096 ;
 
 
 void usage()
@@ -38,6 +38,43 @@ void usage()
     return ;
 }
 
+
+ssize_t parse_space_size(char* inbuf)
+{
+    ssize_t out_size = 0 ;
+    char *p_res = NULL ;
+
+    out_size = strtol(inbuf, &p_res, 10) ;
+    if(p_res == NULL)
+    {
+        return out_size ;
+    }
+
+    switch(*p_res)
+    {
+        case 'k':
+	case 'K':
+	  out_size *= 1024;
+	  break;
+        case 'm':
+	case 'M':
+	  out_size *= (1024*1024);
+	  break;
+	case 'g':
+	case 'G':
+	  out_size *= (1024*1024*1024);
+	  break;
+	case 't':
+	case 'T':
+	  out_size *= (long)(1024*1024*1024)*1024;
+	  break;
+        default:
+	  break;
+    }
+    return out_size ;
+
+    
+}
 
 struct operation_stat{
     int mkdir_success;
@@ -224,15 +261,15 @@ int r_write(int fd, char* buffer, ssize_t size)
 
 }
 
-int write_file(int fd, char*path_buf, char* buffer ,ssize_t buffer_size, ssize_t fsize,int thread_idx)
+int write_file(int fd, char* buffer, 
+               ssize_t buffer_size, ssize_t fsize,
+	       struct operation_stat *stat)
 {
 
     int ret = 0 ;
-    struct operation_stat *stat = statistic[thread_idx];
     ssize_t length = 0; 
     ssize_t current_size = 0 ;
     ssize_t write_bytes = 0 ;
-    char errmsg[1024];
 
     while(length < fsize)
     {
@@ -250,9 +287,6 @@ int write_file(int fd, char*path_buf, char* buffer ,ssize_t buffer_size, ssize_t
         }
         else
         {
-            strerror_r(errno, errmsg, sizeof(errmsg));
-            fprintf(stderr, "THREAD-%-4d: failed to write %s (%d: %s)\n",
-                    thread_idx, path_buf, errno, errmsg);
             stat->write_fail++ ; 
 	    ret = -1; 
 	    break;
@@ -337,11 +371,12 @@ int process_level_file(struct arch_desc* a_desc,  int level, int thread_idx)
         }
 
 
-       ret =  write_file(fd, path_buf, buffer , buffer_sz, file_sz , thread_idx);
+       ret =  write_file(fd, buffer, buffer_sz, file_sz, stat);
        if(ret != 0)
        {
-           fprintf(stderr, "THREAD-%-4d:  %d errors happened while write file %s \n",
-		   thread_idx, -(ret), path_buf);
+           strerror_r(errno, errmsg, sizeof(errmsg));
+           fprintf(stderr, "THREAD-%-4d:  %d errors happened while write file %s (%d: %s)\n",
+		   thread_idx, -(ret), path_buf,errno, errmsg);
        }
 
         close(fd);
@@ -582,11 +617,11 @@ int main(int argc , char* argv[])
             break;
 
         case 's':
-            file_sz = atoi(optarg);
+            file_sz = parse_space_size(optarg);
             break; 
 
 	case 'b':
-	    buffer_sz = atoi(optarg);
+	    buffer_sz = parse_space_size(optarg);
 	    break;
 
         case 'h':
