@@ -11,6 +11,7 @@
 #include <assert.h>
 #include <limits.h>
 #include <pthread.h>
+#include <signal.h>
 
 #define MAX_LEVEL 10 
 
@@ -468,6 +469,12 @@ err_ret:
     return NULL;
 
 }
+
+void sigint_handler(int signo)
+{
+    exit(130);
+}
+
 int main(int argc , char* argv[])
 {
     int ch;
@@ -613,6 +620,12 @@ int main(int argc , char* argv[])
         }
     }
 
+    struct sigaction new_action, old_action;
+    new_action.sa_handler = sigint_handler;
+    new_action.sa_flags = 0 ; 
+    sigemptyset(&new_action.sa_mask);
+
+    sigaction(SIGINT,&new_action, &old_action);
     atexit(print_statistic_and_exit);
     for(i = 0 ; i < thread_num ; i++)
     {
