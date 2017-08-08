@@ -21,16 +21,20 @@ char arch[1024+1] ;
 char type[1024+1] ;
 int  dir_only = 0 ; 
 int  skip_dir = 0;
+int  buffer_sz = 4096 ;
+int  file_sz  =  4096 ;
 
 
 void usage()
 {
     fprintf(stdout, "oceanfile -d work_dir -p thread_num -a directory_arch -t type\n");
-    fprintf(stdout, "-d   --workdir    the directory in which the tests will run\n");
-    fprintf(stdout, "-p   --parallel   thread num in parallel\n");
-    fprintf(stdout, "-a   --arch       directory tree architecture\n");
-    fprintf(stdout, "-t   --type       type of filesize \n");
-
+    fprintf(stdout, "-d   --workdir          the directory in which the tests will run\n");
+    fprintf(stdout, "-D   --dironly          last level of arch are still directory , not file\n");
+    fprintf(stdout, "-S   --skipdir          suppose all the directory have already exist, only create file\n");
+    fprintf(stdout, "-p   --parallel         thread num in parallel\n");
+    fprintf(stdout, "-a   --arch             directory tree architecture\n");
+    fprintf(stdout, "-s   --size             size of file \n");
+    fprintf(stdout, "-b   --buffersize       buffer size of every write operation \n");
     return ;
 }
 
@@ -220,6 +224,43 @@ int r_write(int fd, char* buffer, ssize_t size)
 
 }
 
+int write_file(int fd, char*path_buf, char* buffer ,ssize_t buffer_size, ssize_t fsize,int thread_idx)
+{
+
+    int ret = 0 ;
+    struct operation_stat *stat = statistic[thread_idx];
+    ssize_t length = 0; 
+    ssize_t current_size = 0 ;
+    ssize_t write_bytes = 0 ;
+    char errmsg[1024];
+
+    while(length < fsize)
+    {
+        if ((fsize - length) > buffer_size)
+	    current_size = buffer_size;
+	else
+	    current_size = fsize - length ;
+
+	write_bytes = r_write(fd,buffer,current_size);
+	
+        if(write_bytes >= 0)
+        {
+            stat->write_success++ ; 
+	    length += write_bytes ;
+        }
+        else
+        {
+            strerror_r(errno, errmsg, sizeof(errmsg));
+            fprintf(stderr, "THREAD-%-4d: failed to write %s (%d: %s)\n",
+                    thread_idx, path_buf, errno, errmsg);
+            stat->write_fail++ ; 
+	    ret = -1; 
+	    break;
+	}
+    }
+    return ret ;
+}
+
 int process_level_file(struct arch_desc* a_desc,  int level, int thread_idx)
 {
     int i ; 
@@ -239,8 +280,8 @@ int process_level_file(struct arch_desc* a_desc,  int level, int thread_idx)
     struct operation_stat *stat = statistic[thread_idx];
     int fd = 0 ;
 
-    char *buffer  = malloc(102400);
-    memset(buffer,'\0',102400);
+    char *buffer  = malloc(buffer_sz);
+    memset(buffer,'\0',buffer_sz);
 
     for(i = begin; i <= end ; i++ )
     {
@@ -295,18 +336,13 @@ int process_level_file(struct arch_desc* a_desc,  int level, int thread_idx)
             continue;
         }
 
-        ret = r_write(fd, buffer,102400);
-        if(ret >= 0)
-        {
-            stat->write_success++ ; 
-        }
-        else
-        {
-            strerror_r(errno, errmsg, sizeof(errmsg));
-            fprintf(stderr, "THREAD-%-4d: failed to write %s (%d: %s)\n",
-                    thread_idx, path_buf, errno, errmsg);
-            stat->write_fail++ ; 
-        }
+
+       ret =  write_file(fd, path_buf, buffer , buffer_sz, file_sz , thread_idx);
+       if(ret != 0)
+       {
+           fprintf(stderr, "THREAD-%-4d:  %d errors happened while write file %s \n",
+		   thread_idx, -(ret), path_buf);
+       }
 
         close(fd);
 
@@ -490,10 +526,11 @@ int main(int argc , char* argv[])
     static struct option long_options[] = {
         {"workdir",       required_argument, 0, 'd'},
         {"dironly",       no_argument,       0, 'D'},
-        {"skipdir",       no_argument,       0, 's'},
+        {"skipdir",       no_argument,       0, 'S'},
         {"parallel",      required_argument, 0, 'p'},
         {"arch",          required_argument, 0, 'a'},
-        {"type",          required_argument, 0, 't'},
+        {"filesize",      required_argument, 0, 's'},
+        {"buffersize",    required_argument, 0, 'b'},
         {0, 0 , 0, 0}
     };
 
@@ -501,7 +538,7 @@ int main(int argc , char* argv[])
     memset(arch, '\0', 1024 + 1);
     memset(type, '\0', 1024 + 1);
 
-    while((ch = getopt_long(argc, argv, "h?d:p:a:t:DS", long_options, &option_index)) != -1)
+    while((ch = getopt_long(argc, argv, "h?d:p:a:b:s:DS", long_options, &option_index)) != -1)
     {
         switch(ch)
         {
@@ -544,9 +581,13 @@ int main(int argc , char* argv[])
             strncpy(arch,optarg,1024);
             break;
 
-        case 't':
-            strncpy(type, optarg, 1024);
+        case 's':
+            file_sz = atoi(optarg);
             break; 
+
+	case 'b':
+	    buffer_sz = atoi(optarg);
+	    break;
 
         case 'h':
         case '?':
@@ -578,12 +619,6 @@ int main(int argc , char* argv[])
     if(strlen(arch) == 0)
     {
         fprintf(stderr , "You must specify the directory architecture\n");
-        usage();
-        exit(1);
-    }
-    if(strlen(type) == 0)
-    {
-        fprintf(stderr , "You must specify the test type\n");
         usage();
         exit(1);
     }
