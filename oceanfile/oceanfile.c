@@ -173,7 +173,7 @@ int process_level_dir(struct arch_desc* a_desc,  int level, int thread_idx)
         }
 
 
-        ret = mkdir(path_buf, 0666);
+        ret = mkdir(path_buf, 0755);
         if(ret == 0)
         {
             stat->mkdir_success++;
@@ -238,8 +238,8 @@ int process_level_file(struct arch_desc* a_desc,  int level, int thread_idx)
     struct operation_stat *stat = statistic[thread_idx];
     int fd = 0 ;
 
-    char *buffer  = malloc(4096);
-    memset(buffer,'\0',4096);
+    char *buffer  = malloc(102400);
+    memset(buffer,'\0',102400);
 
     for(i = begin; i <= end ; i++ )
     {
@@ -294,7 +294,7 @@ int process_level_file(struct arch_desc* a_desc,  int level, int thread_idx)
             continue;
         }
 
-        ret = r_write(fd, buffer,4096);
+        ret = r_write(fd, buffer,102400);
         if(ret >= 0)
         {
             stat->write_success++ ; 
@@ -500,9 +500,10 @@ int main(int argc , char* argv[])
         {
         case 'd':
             res = realpath(optarg, workdir);
-            if(!ret)
+            if(res == NULL)
             {
-                fprintf(stderr, "failed to get realpath for %s\n", optarg);
+                strerror_r(errno, errmsg, sizeof(errmsg));
+                fprintf(stderr, "failed to get realpath for %s (%d: %s)\n", optarg, errno, errmsg);
                 exit(1);
             }
 
