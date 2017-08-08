@@ -33,7 +33,7 @@ void usage()
     fprintf(stdout, "-S   --skipdir          suppose all the directory have already exist, only create file\n");
     fprintf(stdout, "-p   --parallel         thread num in parallel\n");
     fprintf(stdout, "-a   --arch             directory tree architecture\n");
-    fprintf(stdout, "-s   --size             size of file \n");
+    fprintf(stdout, "-s   --filesize         size of file \n");
     fprintf(stdout, "-b   --buffersize       buffer size of every write operation \n");
     return ;
 }
