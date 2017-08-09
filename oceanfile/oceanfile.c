@@ -132,7 +132,7 @@ static int print_statistic(struct operation_stat* stat)
 
 }
 
-static void print_statistic_and_exit()
+static void print_statistic_summary()
 {
     int i ; 
     struct operation_stat total_stat;
@@ -541,9 +541,17 @@ err_ret:
 
 }
 
-void sigint_handler(int signo)
+void signal_handler(int signo)
 {
-    exit(130);
+	switch(signo)
+	{
+		case SIGINT:
+			exit(130);
+			break;
+		case SIGUSR1:
+			print_statistic_summary();
+			break;
+	}
 }
 
 int main(int argc , char* argv[])
@@ -691,12 +699,13 @@ int main(int argc , char* argv[])
     }
 
     struct sigaction new_action, old_action;
-    new_action.sa_handler = sigint_handler;
+    new_action.sa_handler = signal_handler;
     new_action.sa_flags = 0 ; 
     sigemptyset(&new_action.sa_mask);
 
     sigaction(SIGINT,&new_action, &old_action);
-    atexit(print_statistic_and_exit);
+    sigaction(SIGUSR1,&new_action, &old_action);
+    atexit(print_statistic_summary);
     for(i = 0 ; i < thread_num ; i++)
     {
         pthread_join(tid_array[i], NULL);
