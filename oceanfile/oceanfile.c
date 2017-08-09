@@ -27,7 +27,7 @@ ssize_t  file_sz  =  4096 ;
 
 void usage()
 {
-    fprintf(stdout, "oceanfile -d work_dir -p thread_num -a directory_arch -t type\n");
+    fprintf(stdout, "oceanfile -d work_dir -p thread_num -a directory_arch [ -s filesize ] [ -b buffersize] [ -D ] [ -S ]\n");
     fprintf(stdout, "-d   --workdir          the directory in which the tests will run\n");
     fprintf(stdout, "-D   --dironly          last level of arch are still directory , not file\n");
     fprintf(stdout, "-S   --skipdir          suppose all the directory have already exist, only create file\n");
