@@ -24,13 +24,14 @@ void usage()
 
 	return ;
 }
+
 string combine_strings(const string &prefix, const string &key)                                                                     
 {
 
 	if (prefix.size() == 0)
 	{
 		string out(key);
-	    return out;
+		return out;
 	}
 	else
 	{
@@ -49,7 +50,7 @@ void split_string(string c_key ,  vector<string>& v)
 	v.push_back(c_key.substr(i,j-i)) ;
 	if(j!= string::npos)
 	{
-	    v.push_back(c_key.substr(++j, c_key.length())) ;
+		v.push_back(c_key.substr(++j, c_key.length())) ;
 	}
 }
 
@@ -71,17 +72,17 @@ int db_get(string db_path , string prefix, string key, string* value)
 	status = db->Get(leveldb::ReadOptions(),c_key, value);
 	if(status.ok() == false)
 	{
-	    cerr << "failed to get " << key << endl;
+		cerr << "failed to get " << key << endl;
 		cerr << status.ToString() << endl;
 		ret = 2;
 	}
 	else
 	{
-	    cout << "prefix: " << prefix << " key: " << key << "  value: " << *value <<endl;
-	    ret =  0;	
+		cout << "prefix: " << prefix << " key: " << key << "  value: " << *value <<endl;
+		ret =  0;	
 	}
 
-    delete db;
+	delete db;
 	return ret ;
 }
 
@@ -103,20 +104,21 @@ int db_put(string db_path, string prefix, string key , string value)
 	status = db->Put(leveldb::WriteOptions(),c_key, value);
 	if(status.ok() == false)
 	{
-	    cerr << "failed to put " << key << endl;
+		cerr << "failed to put " << key << endl;
 		cerr << status.ToString() << endl;
 		ret = 2;
 	}
 	else
 	{
 		cout << "put done!" ;
-	    cout << "prefix: " << prefix << " key: " << key << "  value: " << value << endl;
-	    ret =  0;	
+		cout << "prefix: " << prefix << " key: " << key << "  value: " << value << endl;
+		ret =  0;	
 	}
 
-    delete db;
+	delete db;
 	return ret ;
 }
+
 int db_del(string db_path , string prefix, string key)
 {
 	leveldb::Options options;
@@ -135,21 +137,20 @@ int db_del(string db_path , string prefix, string key)
 	status = db->Delete(leveldb::WriteOptions(),c_key);
 	if(status.ok() == false)
 	{
-	    cerr << "failed to delete " << key << endl;
+		cerr << "failed to delete " << key << endl;
 		cerr << status.ToString() << endl;
 		ret = 2;
 	}
 	else
 	{
 		cout << "delete done!" << endl;
-	    cout << "prefix: " << prefix << " key: " << key  <<endl;
-	    ret =  0;	
+		cout << "prefix: " << prefix << " key: " << key  <<endl;
+		ret =  0;	
 	}
 
-    delete db;
+	delete db;
 	return ret ;
 }
-
 
 int db_dump(string db_path , string prefix, bool key_only)
 {
@@ -174,16 +175,16 @@ int db_dump(string db_path , string prefix, bool key_only)
 		{
 			string key = it->key().ToString();
 			split_string(key, v_k);
-		    if(v_k.size() == 2)
-			    cout << "prefix" << " : " << v_k[0] << " key" << " : " << v_k[1];
+			if(v_k.size() == 2)
+				cout << "prefix" << " : " << v_k[0] << " key" << " : " << v_k[1];
 			else
-			    cout << "key" << " : " << v_k[0];
+				cout << "key" << " : " << v_k[0];
 
 			if(key_only == false)
 				cout << "value : " <<it->value().ToString();
 			cout << endl ;
 			v_k.clear();
-			
+
 		}
 	}
 	else
@@ -192,10 +193,10 @@ int db_dump(string db_path , string prefix, bool key_only)
 		{
 			string key = it->key().ToString();
 			split_string(key, v_k);
-		    if(v_k.size() == 2)
-			    cout << "prefix" << " : " << v_k[0] << " key" << " : " << v_k[1];
+			if(v_k.size() == 2)
+				cout << "prefix" << " : " << v_k[0] << " key" << " : " << v_k[1];
 			else
-			    cout << "key" << " : " << v_k[0];
+				cout << "key" << " : " << v_k[0];
 
 			if(key_only == false)
 				cout << "value : " <<it->value().ToString();
@@ -213,12 +214,14 @@ int db_dump(string db_path , string prefix, bool key_only)
 	else
 	{
 		cout << "dump done!" << endl;
-	    ret =  0;	
+		ret =  0;	
 	}
 
-    delete db;
+	delete db;
 	return ret ;
 }
+
+
 int main(int argc, char* argv[])
 {
 	char db_path[1024];
@@ -291,10 +294,10 @@ int main(int argc, char* argv[])
 		case 'o':
 			strncpy(op,optarg,255);
 			if(strcmp(op,"put") != 0   && 
-		       strcmp(op, "get") != 0  &&
-			   strcmp(op, "del") != 0  &&
-			   strcmp(op, "dump") != 0 &&
-			   strcmp(op, "dumpkey") != 0)
+					strcmp(op, "get") != 0  &&
+					strcmp(op, "del") != 0  &&
+					strcmp(op, "dump") != 0 &&
+					strcmp(op, "dumpkey") != 0)
 			{
 				fprintf(stderr,"invalid op :%s, we only support (put, get, del)\n", op);
 				exit(2);
@@ -350,33 +353,33 @@ int main(int argc, char* argv[])
 
 
 	string s_db_path(db_path);
-	
+
 	if(strcmp(op, "get") == 0)
 	{
 		string s_value ;
-	    ret = db_get(s_db_path, s_prefix, s_key, &s_value);
+		ret = db_get(s_db_path, s_prefix, s_key, &s_value);
 	}
 	else if(strcmp(op, "put") == 0)
 	{
 		string s_value(value);
-	    ret = db_put(s_db_path,prefix, key, s_value);
+		ret = db_put(s_db_path,prefix, key, s_value);
 	}
 	else if(strcmp(op, "del") == 0)
 	{
-	    ret = db_del(s_db_path, s_prefix, s_key);
+		ret = db_del(s_db_path, s_prefix, s_key);
 	}
 	else if (strcmp(op, "dump") == 0)
 	{
-	    ret = db_dump(s_db_path, s_prefix, false);
+		ret = db_dump(s_db_path, s_prefix, false);
 	}
 	else if (strcmp(op, "dumpkey") == 0)
 	{
-	    ret = db_dump(s_db_path, s_prefix, true);
+		ret = db_dump(s_db_path, s_prefix, true);
 	}
 	else
 	{
 		cerr<< "op " << op << " is not supported yet" <<endl;
-	    ret = -1;
+		ret = -1;
 	}
 
 	return ret;
