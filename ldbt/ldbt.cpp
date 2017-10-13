@@ -75,6 +75,34 @@ int db_get(string db_path , string prefix, string key, string* value)
 
 int db_put(string db_path, string prefix, string key , string value)
 {
+	leveldb::Options options;
+	leveldb::DB* db ;
+	leveldb::Status status = leveldb::DB::Open(options, db_path, &db);
+
+	int ret ;
+	if(status.ok() == false)
+	{
+		cerr << "failed to open db " << db_path << endl;
+		cerr << status.ToString() << endl;
+		return 1;
+	}
+
+	string c_key = combine_strings(prefix, key);
+	status = db->Put(leveldb::WriteOptions(),c_key, value);
+	if(status.ok() == false)
+	{
+	    cerr << "failed to put " << key << endl;
+		cerr << status.ToString() << endl;
+		ret = 2;
+	}
+	else
+	{
+	    cout << "Put prefix: " << prefix << " key: " << key << "  value: " << value << " Done!" << endl;
+	    ret =  0;	
+	}
+
+    delete db;
+	return ret ;
     return 0;
 }
 int main(int argc, char* argv[])
@@ -106,7 +134,7 @@ int main(int argc, char* argv[])
 	memset(prefix, '\0', sizeof(prefix));
 	memset(key, '\0', sizeof(key));
 
-	while((ch = getopt_long(argc,argv, "h?d:o:p:k:", long_options,&option_index)) != -1)
+	while((ch = getopt_long(argc,argv, "h?d:o:p:k:v:", long_options,&option_index)) != -1)
 	{
 		switch(ch)
 		{
