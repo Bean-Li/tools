@@ -193,7 +193,7 @@ int db_dump(string db_path , string prefix, bool key_only)
 			string key = it->key().ToString();
 			split_string(key, v_k);
 		    if(v_k.size() == 2)
-			    cout << "prefix" << " : " << v_k[0] << "key" << " : " << v_k[1];
+			    cout << "prefix" << " : " << v_k[0] << " key" << " : " << v_k[1];
 			else
 			    cout << "key" << " : " << v_k[0];
 
