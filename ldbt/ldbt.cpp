@@ -97,13 +97,45 @@ int db_put(string db_path, string prefix, string key , string value)
 	}
 	else
 	{
-	    cout << "Put prefix: " << prefix << " key: " << key << "  value: " << value << " Done!" << endl;
+		cout << "put done!" ;
+	    cout << "prefix: " << prefix << " key: " << key << "  value: " << value << endl;
 	    ret =  0;	
 	}
 
     delete db;
 	return ret ;
-    return 0;
+}
+int db_del(string db_path , string prefix, string key)
+{
+	leveldb::Options options;
+	leveldb::DB* db ;
+	leveldb::Status status = leveldb::DB::Open(options, db_path, &db);
+
+	int ret ;
+	if(status.ok() == false)
+	{
+		cerr << "failed to open db " << db_path << endl;
+		cerr << status.ToString() << endl;
+		return 1;
+	}
+
+	string c_key = combine_strings(prefix, key);
+	status = db->Delete(leveldb::WriteOptions(),c_key);
+	if(status.ok() == false)
+	{
+	    cerr << "failed to delete " << key << endl;
+		cerr << status.ToString() << endl;
+		ret = 2;
+	}
+	else
+	{
+		cout << "delete done!" << endl;
+	    cout << "prefix: " << prefix << " key: " << key  <<endl;
+	    ret =  0;	
+	}
+
+    delete db;
+	return ret ;
 }
 int main(int argc, char* argv[])
 {
@@ -175,9 +207,11 @@ int main(int argc, char* argv[])
 
 		case 'o':
 			strncpy(op,optarg,255);
-			if(strcmp(op,"put") != 0 && strcmp(op, "get") != 0)
+			if(strcmp(op,"put") != 0 && 
+		       strcmp(op, "get") != 0 &&
+			   strcmp(op, "del"))
 			{
-				fprintf(stderr,"invalid op :%s, we only support put and get\n", op);
+				fprintf(stderr,"invalid op :%s, we only support (put, get, del)\n", op);
 				exit(2);
 			}
 			break;
@@ -235,15 +269,24 @@ int main(int argc, char* argv[])
 	if(strcmp(op, "get") == 0)
 	{
 		string s_value ;
-	    db_get(s_db_path, s_prefix, s_key, &s_value);
+	    ret = db_get(s_db_path, s_prefix, s_key, &s_value);
 	}
 	else if(strcmp(op, "put") == 0)
 	{
 		string s_value(value);
-	    db_put(s_db_path,prefix, key, s_value);
+	    ret = db_put(s_db_path,prefix, key, s_value);
+	}
+	else if(strcmp(op, "del") == 0)
+	{
+	    ret = db_del(s_db_path, s_prefix, s_key);
+	}
+	else
+	{
+		cerr<< "op " << op << " is not supported yet" <<endl;
+	    ret = -1;
 	}
 
-	return 0;
+	return ret;
 
 }
 
