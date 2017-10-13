@@ -2,6 +2,7 @@
 #include <string>
 #include <iostream>
 #include <set>
+#include <vector>
 #include <stdlib.h>
 #include <getopt.h>
 #include <sys/stat.h>
@@ -40,6 +41,17 @@ string combine_strings(const string &prefix, const string &key)
 	}
 }
 
+void split_string(string c_key ,  vector<string>& v)
+{
+	string::size_type i = 0 ; 
+	string::size_type j = c_key.find('\0');
+
+	v.push_back(c_key.substr(i,j-i)) ;
+	if(j!= string::npos)
+	{
+	    v.push_back(c_key.substr(++j, c_key.length())) ;
+	}
+}
 
 int db_get(string db_path , string prefix, string key, string* value)
 {
@@ -154,25 +166,41 @@ int db_dump(string db_path , string prefix, bool key_only)
 		return 1;
 	}
 
+	vector<string> v_k ; 
 	leveldb::Iterator* it = db->NewIterator(leveldb::ReadOptions());
 	if(prefix_flag == false) 
 	{
 		for (it->SeekToFirst(); it->Valid(); it->Next())
 		{
-			if(key_only == false)
-			    cout << it->key().ToString() << " : " << it->value().ToString() << endl;
+			string key = it->key().ToString();
+			split_string(key, v_k);
+		    if(v_k.size() == 2)
+			    cout << "prefix" << " : " << v_k[0] << " key" << " : " << v_k[1];
 			else
-				cout << it->key().ToString() << endl ;
+			    cout << "key" << " : " << v_k[0];
+
+			if(key_only == false)
+				cout << "value : " <<it->value().ToString();
+			cout << endl ;
+			v_k.clear();
+			
 		}
 	}
 	else
 	{
 		for(it->Seek(prefix); it->Valid() && it->key().starts_with(prefix) ; it->Next())    
 		{
-			if(key_only == false)
-			    cout << it->key().ToString() << " : " << it->value().ToString() << endl;
+			string key = it->key().ToString();
+			split_string(key, v_k);
+		    if(v_k.size() == 2)
+			    cout << "prefix" << " : " << v_k[0] << "key" << " : " << v_k[1];
 			else
-				cout << it->key().ToString() << endl ;
+			    cout << "key" << " : " << v_k[0];
+
+			if(key_only == false)
+				cout << "value : " <<it->value().ToString();
+			cout << endl ;
+			v_k.clear();
 		}
 	}
 
