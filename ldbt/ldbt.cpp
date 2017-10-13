@@ -16,7 +16,7 @@ void usage()
 	fprintf(stdout, "---------------------------------------------------------\n");
 	fprintf(stdout, "ldbt -d db_path -o operation -p prefix -k key \n");
 	fprintf(stdout, "-d  --db_path         specify the leveldb path \n");
-	fprintf(stdout, "-o  --op              specify the operation (put or get)\n");
+	fprintf(stdout, "-o  --op              specify the operation (put or get or del or dump or dumpkey)\n");
 	fprintf(stdout, "-p  --prefix          specify the key's prefix (if any) \n");
 	fprintf(stdout, "-k  --key             specify the key \n");
 	fprintf(stdout, "-v  --value           specify the value \n");
@@ -137,6 +137,60 @@ int db_del(string db_path , string prefix, string key)
     delete db;
 	return ret ;
 }
+
+
+int db_dump(string db_path , string prefix, bool key_only)
+{
+	leveldb::Options options;
+	leveldb::DB* db ;
+	leveldb::Status status = leveldb::DB::Open(options, db_path, &db);
+
+	int ret ;
+	bool prefix_flag = (prefix.size() != 0) ;
+	if(status.ok() == false)
+	{
+		cerr << "failed to open db " << db_path << endl;
+		cerr << status.ToString() << endl;
+		return 1;
+	}
+
+	leveldb::Iterator* it = db->NewIterator(leveldb::ReadOptions());
+	if(prefix_flag == false) 
+	{
+		for (it->SeekToFirst(); it->Valid(); it->Next())
+		{
+			if(key_only == false)
+			    cout << it->key().ToString() << " : " << it->value().ToString() << endl;
+			else
+				cout << it->key().ToString() << endl ;
+		}
+	}
+	else
+	{
+		for(it->Seek(prefix); it->Valid() && it->key().starts_with(prefix) ; it->Next())    
+		{
+			if(key_only == false)
+			    cout << it->key().ToString() << " : " << it->value().ToString() << endl;
+			else
+				cout << it->key().ToString() << endl ;
+		}
+	}
+
+	if(it->status().ok() == false)
+	{
+		cerr << "An error was found during the scan" << endl;
+		cerr << it->status().ToString() << endl; 
+		ret =  -1;
+	}
+	else
+	{
+		cout << "dump done!" << endl;
+	    ret =  0;	
+	}
+
+    delete db;
+	return ret ;
+}
 int main(int argc, char* argv[])
 {
 	char db_path[1024];
@@ -152,6 +206,7 @@ int main(int argc, char* argv[])
 		{"op", required_argument, 0 , 'o'},
 		{"prefix", required_argument, 0 , 'p'},
 		{"key", required_argument, 0 , 'k'},
+		{"value", required_argument, 0 , 'v'},
 		{0,0,0,0}
 	};
 
@@ -207,9 +262,11 @@ int main(int argc, char* argv[])
 
 		case 'o':
 			strncpy(op,optarg,255);
-			if(strcmp(op,"put") != 0 && 
-		       strcmp(op, "get") != 0 &&
-			   strcmp(op, "del"))
+			if(strcmp(op,"put") != 0   && 
+		       strcmp(op, "get") != 0  &&
+			   strcmp(op, "del") != 0  &&
+			   strcmp(op, "dump") != 0 &&
+			   strcmp(op, "dumpkey") != 0)
 			{
 				fprintf(stderr,"invalid op :%s, we only support (put, get, del)\n", op);
 				exit(2);
@@ -246,7 +303,7 @@ int main(int argc, char* argv[])
 		exit(1);
 	}
 
-	if(strlen(key) == 0)
+	if(strlen(key) == 0 && strcmp(op, "dump") && strcmp(op, "dumpkey"))
 	{
 		fprintf(stderr, "You must specify the key, prefix is optional\n");
 		usage();
@@ -279,6 +336,14 @@ int main(int argc, char* argv[])
 	else if(strcmp(op, "del") == 0)
 	{
 	    ret = db_del(s_db_path, s_prefix, s_key);
+	}
+	else if (strcmp(op, "dump") == 0)
+	{
+	    ret = db_dump(s_db_path, s_prefix, false);
+	}
+	else if (strcmp(op, "dumpkey") == 0)
+	{
+	    ret = db_dump(s_db_path, s_prefix, true);
 	}
 	else
 	{
