@@ -3,7 +3,7 @@
 #include <iostream>
 #include <set>
 #include <vector>
-#include <stdlib.h>
+#include <cstdlib>
 #include <getopt.h>
 #include <sys/stat.h>
 #include <sys/types.h>
