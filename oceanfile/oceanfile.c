@@ -20,6 +20,7 @@ int thread_num = 0;
 char arch[1024+1] ; 
 char type[1024+1] ;
 int  dir_only = 0 ; 
+int  create_only = 0;
 int  skip_dir = 0;
 ssize_t  buffer_sz = 4096 ;
 ssize_t  file_sz  =  4096 ;
@@ -30,6 +31,7 @@ void usage()
 	fprintf(stdout, "oceanfile -d work_dir -p thread_num -a directory_arch [ -s filesize ] [ -b buffersize] [ -D ] [ -S ]\n");
 	fprintf(stdout, "-d   --workdir          the directory in which the tests will run\n");
 	fprintf(stdout, "-D   --dironly          last level of arch are still directory , not file\n");
+	fprintf(stdout, "-t   --createonly       only create file, not write, if this flag set, the program will skip -s and -b\n");
 	fprintf(stdout, "-S   --skipdir          suppose all the directory have already exist, only create file\n");
 	fprintf(stdout, "-p   --parallel         thread num in parallel\n");
 	fprintf(stdout, "-a   --arch             directory tree architecture\n");
@@ -313,9 +315,13 @@ int process_level_file(struct arch_desc* a_desc,  int level, int thread_idx)
 	int j ;
 	struct operation_stat *stat = statistic[thread_idx];
 	int fd = 0 ;
+    char* buffer = NULL;
 
-	char *buffer  = malloc(buffer_sz);
-	memset(buffer,'b',buffer_sz);
+	if(create_only == 0)
+	{
+     	buffer  = malloc(buffer_sz);
+	    memset(buffer,'b',buffer_sz);
+	}
 
 	for(i = begin; i <= end ; i++ )
 	{
@@ -371,12 +377,15 @@ int process_level_file(struct arch_desc* a_desc,  int level, int thread_idx)
 		}
 
 
-		ret =  write_file(fd, buffer, buffer_sz, file_sz, stat);
-		if(ret != 0)
+		if(create_only == 0)
 		{
-			strerror_r(errno, errmsg, sizeof(errmsg));
-			fprintf(stderr, "THREAD-%-4d:  %d errors happened while write file %s (%d: %s)\n",
-					thread_idx, -(ret), path_buf,errno, errmsg);
+			ret =  write_file(fd, buffer, buffer_sz, file_sz, stat);
+			if(ret != 0)
+			{
+				strerror_r(errno, errmsg, sizeof(errmsg));
+				fprintf(stderr, "THREAD-%-4d:  %d errors happened while write file %s (%d: %s)\n",
+						thread_idx, -(ret), path_buf,errno, errmsg);
+			}
 		}
 
 		close(fd);
@@ -569,6 +578,7 @@ int main(int argc , char* argv[])
 	static struct option long_options[] = {
 		{"workdir",       required_argument, 0, 'd'},
 		{"dironly",       no_argument,       0, 'D'},
+		{"touchonly",     no_argument,       0, 't'},
 		{"skipdir",       no_argument,       0, 'S'},
 		{"parallel",      required_argument, 0, 'p'},
 		{"arch",          required_argument, 0, 'a'},
@@ -581,7 +591,7 @@ int main(int argc , char* argv[])
 	memset(arch, '\0', 1024 + 1);
 	memset(type, '\0', 1024 + 1);
 
-	while((ch = getopt_long(argc, argv, "h?d:p:a:b:s:DS", long_options, &option_index)) != -1)
+	while((ch = getopt_long(argc, argv, "h?d:p:a:b:s:DtS", long_options, &option_index)) != -1)
 	{
 		switch(ch)
 		{
@@ -610,6 +620,10 @@ int main(int argc , char* argv[])
 
 		case 'D':
 			dir_only = 1;
+			break;
+
+		case 't':
+			create_only = 1;
 			break;
 
 		case 'S':
