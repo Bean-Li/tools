@@ -16,7 +16,7 @@
 #define MAX_LEVEL 10 
 
 char workdir[PATH_MAX+1] ;
-int thread_num = 0;
+int thread_num = 1;
 char arch[1024+1] ; 
 char type[1024+1] ;
 int  dir_only = 0 ; 
@@ -315,7 +315,7 @@ int process_level_file(struct arch_desc* a_desc,  int level, int thread_idx)
     int fd = 0 ;
     char* buffer = NULL;
 
-    if(file_sz == 0)
+    if(file_sz != 0)
     {
         buffer  = malloc(buffer_sz);
         memset(buffer,'b',buffer_sz);
@@ -375,7 +375,7 @@ int process_level_file(struct arch_desc* a_desc,  int level, int thread_idx)
         }
 
 
-        if(file_sz == 0)
+        if(file_sz != 0)
         {
             ret =  write_file(fd, buffer, buffer_sz, file_sz, stat);
             if(ret != 0)
