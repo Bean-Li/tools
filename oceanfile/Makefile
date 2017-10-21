@@ -1,6 +1,6 @@
 .PHONY: all clean depend
 
-CFLAGS := -Wall -Werror  -fPIC
+CFLAGS := -Wall -Werror  -fPIC -g
 LDFLAGS := -lpthread
 CC := gcc
 
